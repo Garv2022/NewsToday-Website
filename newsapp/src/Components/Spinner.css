@@ -1,0 +1,12 @@
+/* Spinner.css */
+.loading-image {
+    width: 10px; /* Adjust the size as needed */
+    height: 10px; /* Adjust the size as needed */
+  }
+  
+  .text-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
