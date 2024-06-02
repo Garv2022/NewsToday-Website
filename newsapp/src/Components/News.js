@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import NewsItem from './NewsItem';
 import Spinner from './Spinner';
 import PropTypes from 'prop-types';
+import InfiniteScroll from "react-infinite-scroll-component";
 
 export class News extends Component {
   static defaultProps = {
@@ -16,6 +17,10 @@ export class News extends Component {
     category: PropTypes.string,
   };
 
+  capitalizeFirstLetter = (string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  };
+
   constructor(props) {
     super(props);
     this.state = {
@@ -24,6 +29,7 @@ export class News extends Component {
       page: 1,
       totalResults: 0,
     };
+    document.title = `${this.capitalizeFirstLetter(this.props.category)} - NewsToday`;
   }
 
   async componentDidMount() {
@@ -44,76 +50,57 @@ export class News extends Component {
     const data = await fetch(url);
     const parsedData = await data.json();
     this.setState({
-      articles: parsedData.articles,
+      articles: page === 1 ? parsedData.articles : this.state.articles.concat(parsedData.articles),
       totalResults: parsedData.totalResults,
       loading: false,
     });
   };
 
-  handleNextClick = async () => {
+  fetchMoreData = () => {
     if (this.state.page + 1 <= Math.ceil(this.state.totalResults / this.props.pageSize)) {
-      this.setState({ loading: true });
-      const nextPage = this.state.page + 1;
-      this.setState({ page: nextPage }, () => {
-        this.fetchArticles(nextPage);
-      });
-    }
-  };
-
-  handlePrevClick = async () => {
-    if (this.state.page > 1) {
-      this.setState({ loading: true });
-      const prevPage = this.state.page - 1;
-      this.setState({ page: prevPage }, () => {
-        this.fetchArticles(prevPage);
+      this.setState({ page: this.state.page + 1 }, () => {
+        this.fetchArticles(this.state.page);
       });
     }
   };
 
   render() {
-    const { articles, loading, page, totalResults } = this.state;
+    const { articles, loading, totalResults } = this.state;
     const { pageSize } = this.props;
 
     return (
       <div className="container my-3">
         <h1 className="text-center" style={{ margin: '40px 0px' }}>
-          NewsToday: Top Headlines of the day !!
+          NewsToday: Top {this.capitalizeFirstLetter(this.props.category)} Headlines 
         </h1>
-        {loading && <Spinner />}
-        <div className="row">
-          {articles && articles.map((element) => {
-            const title = element.title ? element.title.slice(0, 50) : '';
-            const description = element.description ? element.description.slice(0, 100) : '';
-            return (
-              <div className="col-md-4" key={element.url}>
-                <NewsItem
-                  title={title}
-                  description={description}
-                  imageUrl={element.urlToImage}
-                  newsUrl={element.url}
-                />
-              </div>
-            );
-          })}
-        </div>
-        <div className="container d-flex justify-content-between">
-          <button
-            type="button"
-            disabled={page <= 1}
-            className="btn btn-dark"
-            onClick={this.handlePrevClick}
-          >
-            &larr; Previous
-          </button>
-          <button
-            type="button"
-            disabled={page + 1 > Math.ceil(totalResults / pageSize)}
-            className="btn btn-dark"
-            onClick={this.handleNextClick}
-          >
-            Next &rarr;
-          </button>
-        </div>
+        <InfiniteScroll
+          dataLength={articles.length}
+          next={this.fetchMoreData}
+          hasMore={articles.length < totalResults}
+          loader={<Spinner />}
+        >
+          <div className="row">
+            {articles.map((element) => {
+              const title = element.title ? element.title.slice(0, 50) : '';
+              const description = element.description ? element.description.slice(0, 100) : '';
+              const author = element.author ? element.author : "Unknown";
+              const publishedAt = element.publishedAt ? new Date(element.publishedAt).toGMTString() : "Unknown date";
+
+              return (
+                <div className="col-md-4" key={element.url}>
+                  <NewsItem
+                    title={title}
+                    description={description}
+                    imageUrl={element.urlToImage}
+                    newsUrl={element.url}
+                    author={author}
+                    date={publishedAt}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </InfiniteScroll>
       </div>
     );
   }
